@@ -154,27 +154,29 @@ function drawGraphOnCanvas(canvas, expr) {
   const width = (canvas.width = 260);
   const height = (canvas.height = 160);
 
+  // 그릴 범위
   const xMin = -10;
   const xMax = 10;
   const yMin = -10;
   const yMax = 10;
 
+  // 배경
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, width, height);
 
-  // 축
+  // 축 그리기
   ctx.strokeStyle = "#4b5563";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  const y0 = (yMax / (yMax - yMin)) * height;
+  const y0 = (yMax / (yMax - yMin)) * height;              // x축
   ctx.moveTo(0, y0);
   ctx.lineTo(width, y0);
-  const x0 = ((0 - xMin) / (xMax - xMin)) * width;
+  const x0 = ((0 - xMin) / (xMax - xMin)) * width;          // y축
   ctx.moveTo(x0, 0);
   ctx.lineTo(x0, height);
   ctx.stroke();
 
-  // 그래프
+  // 함수 그래프
   ctx.strokeStyle = "#38bdf8";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -182,13 +184,27 @@ function drawGraphOnCanvas(canvas, expr) {
 
   for (let px = 0; px <= width; px++) {
     const x = xMin + (px / width) * (xMax - xMin);
-    const y = evalExprAtX(expr, x);
-    // 범위 밖 / 계산 불가는 끊어서 그리기
-    if (!isFinite(y) || y < yMin || y > yMax) {
+    let y = evalExprAtX(expr, x);
+
+    // 계산 안 되면 그 구간 끊기
+    if (!isFinite(y)) {
       started = false;
       continue;
     }
-    const py = height - ((y - yMin) / (yMax - yMin)) * height;
+
+    // x=0 근처(수직 점근선)는 선 끊어서 왼쪽/오른쪽 따로
+    if (Math.abs(x) < 0.05) {
+      started = false;
+      continue;
+    }
+
+    // 너무 큰 값은 화면 범위 안으로 잘라(clamp)
+    let yClamped = y;
+    if (yClamped < yMin) yClamped = yMin;
+    if (yClamped > yMax) yClamped = yMax;
+
+    const py =
+      height - ((yClamped - yMin) / (yMax - yMin)) * height;
 
     if (!started) {
       ctx.moveTo(px, py);
