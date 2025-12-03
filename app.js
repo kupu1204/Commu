@@ -146,7 +146,6 @@ function evalExprAtX(expr, x) {
   }
 }
 
-
 function drawGraphOnCanvas(canvas, expr) {
   if (!canvas || !expr) return;
 
@@ -154,29 +153,32 @@ function drawGraphOnCanvas(canvas, expr) {
   const width = (canvas.width = 260);
   const height = (canvas.height = 160);
 
-  // 그릴 범위
+  // x 범위: -10 ~ 10
   const xMin = -10;
   const xMax = 10;
-  const yMin = -10;
-  const yMax = 10;
+
+  // y 스케일: -10 ~ 10 정도를 화면 높이에 매핑
+  const yScale = 10;                 // 이 값 줄이면 더 뾰족 / 키우면 더 납작
+  const k = height / (2 * yScale);   // y 1만큼 변할 때 픽셀 변환
 
   // 배경
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, width, height);
 
-  // 축 그리기
+  // 축: y=0은 가운데, x=0은 가운데 비슷한 위치
+  const y0 = height / 2;
+  const x0 = ((0 - xMin) / (xMax - xMin)) * width;
+
   ctx.strokeStyle = "#4b5563";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  const y0 = (yMax / (yMax - yMin)) * height;              // x축
   ctx.moveTo(0, y0);
-  ctx.lineTo(width, y0);
-  const x0 = ((0 - xMin) / (xMax - xMin)) * width;          // y축
+  ctx.lineTo(width, y0);   // x축
   ctx.moveTo(x0, 0);
-  ctx.lineTo(x0, height);
+  ctx.lineTo(x0, height);  // y축
   ctx.stroke();
 
-  // 함수 그래프
+  // 그래프
   ctx.strokeStyle = "#38bdf8";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -184,27 +186,15 @@ function drawGraphOnCanvas(canvas, expr) {
 
   for (let px = 0; px <= width; px++) {
     const x = xMin + (px / width) * (xMax - xMin);
-    let y = evalExprAtX(expr, x);
+    const y = evalExprAtX(expr, x);
 
-    // 계산 안 되면 그 구간 끊기
+    // NaN / Infinity만 끊기고, 나머지는 그냥 그려버림
     if (!isFinite(y)) {
       started = false;
       continue;
     }
 
-    // x=0 근처(수직 점근선)는 선 끊어서 왼쪽/오른쪽 따로
-    if (Math.abs(x) < 0.05) {
-      started = false;
-      continue;
-    }
-
-    // 너무 큰 값은 화면 범위 안으로 잘라(clamp)
-    let yClamped = y;
-    if (yClamped < yMin) yClamped = yMin;
-    if (yClamped > yMax) yClamped = yMax;
-
-    const py =
-      height - ((yClamped - yMin) / (yMax - yMin)) * height;
+    const py = y0 - y * k;  // y=0이 가운데, 위로 갈수록 값 커짐
 
     if (!started) {
       ctx.moveTo(px, py);
@@ -213,8 +203,11 @@ function drawGraphOnCanvas(canvas, expr) {
       ctx.lineTo(px, py);
     }
   }
+
   ctx.stroke();
 }
+
+
 
 // ---------- 그래프 ON/OFF 토글 ----------
 
