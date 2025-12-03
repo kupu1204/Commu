@@ -153,59 +153,76 @@ function drawGraphOnCanvas(canvas, expr) {
   const width = (canvas.width = 260);
   const height = (canvas.height = 160);
 
-  // x 범위: -10 ~ 10
+  // 화면에 보여줄 x, y 범위
   const xMin = -10;
   const xMax = 10;
-
-  // y 스케일: -10 ~ 10 정도를 화면 높이에 매핑
-  const yScale = 10;                 // 이 값 줄이면 더 뾰족 / 키우면 더 납작
-  const k = height / (2 * yScale);   // y 1만큼 변할 때 픽셀 변환
+  const yMin = -10;
+  const yMax = 10;
 
   // 배경
   ctx.fillStyle = "#020617";
   ctx.fillRect(0, 0, width, height);
 
-  // 축: y=0은 가운데, x=0은 가운데 비슷한 위치
-  const y0 = height / 2;
-  const x0 = ((0 - xMin) / (xMax - xMin)) * width;
-
+  // --------- 축 그리기 ----------
   ctx.strokeStyle = "#4b5563";
   ctx.lineWidth = 1;
   ctx.beginPath();
+
+  // x축 (y = 0)
+  const y0 = (yMax / (yMax - yMin)) * height;
   ctx.moveTo(0, y0);
-  ctx.lineTo(width, y0);   // x축
+  ctx.lineTo(width, y0);
+
+  // y축 (x = 0)
+  const x0 = ((0 - xMin) / (xMax - xMin)) * width;
   ctx.moveTo(x0, 0);
-  ctx.lineTo(x0, height);  // y축
+  ctx.lineTo(x0, height);
+
   ctx.stroke();
 
-  // 그래프
+  // --------- 그래프 그리기 ----------
   ctx.strokeStyle = "#38bdf8";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
+
   let started = false;
+  let prevPy = null;
+
+  // 캔버스 높이 기준으로 "너무 큰 점프"이면 끊어버릴 기준
+  const MAX_JUMP = height; // 한 프레임에서 화면 전체 높이 이상 점프하면 끊기
 
   for (let px = 0; px <= width; px++) {
     const x = xMin + (px / width) * (xMax - xMin);
     const y = evalExprAtX(expr, x);
 
-    // NaN / Infinity만 끊기고, 나머지는 그냥 그려버림
-    if (!isFinite(y)) {
+    // NaN / 무한대 / 너무 큰 값이면 이 구간은 건너뜀 (끊기)
+    if (!isFinite(y) || Math.abs(y) > 1e6) {
       started = false;
+      prevPy = null;
       continue;
     }
 
-    const py = y0 - y * k;  // y=0이 가운데, 위로 갈수록 값 커짐
+    // y를 화면 좌표로 변환 (yMin~yMax 밖이어도 일단 좌표는 계산)
+    const py = height - ((y - yMin) / (yMax - yMin)) * height;
 
     if (!started) {
       ctx.moveTo(px, py);
       started = true;
     } else {
-      ctx.lineTo(px, py);
+      // 이전 점이 있고, y가 너무 많이 튀면 → 그래프 끊고 새로 시작
+      if (prevPy !== null && Math.abs(py - prevPy) > MAX_JUMP) {
+        ctx.moveTo(px, py);
+      } else {
+        ctx.lineTo(px, py);
+      }
     }
+
+    prevPy = py;
   }
 
   ctx.stroke();
 }
+
 
 
 
