@@ -1,7 +1,6 @@
 // app.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ⬇⬇ 여기 너 Supabase 프로젝트 정보 넣기 ⬇⬇
 const supabaseUrl = "https://smzbrhwdeirfeivaxktt.supabase.co";
 const supabaseKey = "sb_publishable_rPWVO3_OnyhoH-TqB8zinA_L-5vdG6T";
 
